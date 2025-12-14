@@ -1,0 +1,25 @@
+{
+  "name": "tetris-blockchain-payment",
+  "version": "1.0.0",
+  "description": "Smart contract for Tetris game Ruby top-up payments",
+  "scripts": {
+    "test-connection": "hardhat run test-connection.js",
+    "compile": "hardhat compile",
+    "deploy:mumbai": "hardhat run deploy.js --network polygonMumbai",
+    "deploy:sepolia": "hardhat run deploy.js --network sepolia",
+    "deploy:bsc-testnet": "hardhat run deploy.js --network bscTestnet",
+    "deploy:polygon": "hardhat run deploy.js --network polygon",
+    "deploy:bsc": "hardhat run deploy.js --network bsc",
+    "test": "hardhat test",
+    "verify": "hardhat verify"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.9.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
