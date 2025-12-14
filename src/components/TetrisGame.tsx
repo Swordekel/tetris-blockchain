@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
-import { getAudioManager } from '../utils/audio';
+import { Card, CardContent } from './ui/card';
 import { Volume2, VolumeX } from 'lucide-react';
 import { LineClearEffect } from './LineClearEffect';
 
@@ -425,6 +425,34 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
     setIsPaused(prev => !prev);
   };
 
+  // Mobile controls handlers
+  const handleMobileMove = (direction: 'left' | 'right' | 'down') => {
+    if (!isPlaying || isPaused || gameOver) return;
+    
+    switch (direction) {
+      case 'left':
+        movePiece(-1, 0);
+        break;
+      case 'right':
+        movePiece(1, 0);
+        break;
+      case 'down':
+        dropPiece();
+        setScore(prev => prev + 1);
+        break;
+    }
+  };
+
+  const handleMobileRotate = () => {
+    if (!isPlaying || isPaused || gameOver) return;
+    rotatePiece();
+  };
+
+  const handleMobileHardDrop = () => {
+    if (!isPlaying || isPaused || gameOver) return;
+    hardDrop();
+  };
+
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
@@ -488,6 +516,94 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 {isPaused ? 'Resume' : 'Pause'}
               </Button>
             )}
+          </div>
+
+          {/* Mobile Controls - Only visible on small screens */}
+          <div className="md:hidden flex flex-col gap-3">
+            <div className="text-xs text-center text-white/60">Mobile Controls</div>
+            
+            {/* Direction Controls */}
+            <div className="grid grid-cols-3 gap-2">
+              <div></div>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMobileRotate();
+                }}
+                onClick={handleMobileRotate}
+              >
+                ↑
+              </Button>
+              <div></div>
+              
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMobileMove('left');
+                }}
+                onClick={() => handleMobileMove('left')}
+              >
+                ←
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMobileMove('down');
+                }}
+                onClick={() => handleMobileMove('down')}
+              >
+                ↓
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMobileMove('right');
+                }}
+                onClick={() => handleMobileMove('right')}
+              >
+                →
+              </Button>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 active:bg-purple-500/40 border-purple-500/30"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMobileRotate();
+                }}
+                onClick={handleMobileRotate}
+              >
+                🔄 Rotate
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 bg-red-500/20 hover:bg-red-500/30 active:bg-red-500/40 border-red-500/30"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMobileHardDrop();
+                }}
+                onClick={handleMobileHardDrop}
+              >
+                ⬇️ Drop
+              </Button>
+            </div>
           </div>
         </div>
 

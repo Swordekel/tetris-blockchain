@@ -376,12 +376,31 @@ export function BlockchainTopUp({ accessToken, userId, onUpdate }: BlockchainTop
     } catch (error: any) {
       console.error('Purchase error:', error);
       
-      if (error.code === 'ACTION_REJECTED') {
-        toast.error('Transaction rejected by user');
-      } else if (error.code === 'INSUFFICIENT_FUNDS') {
+      // Handle user rejection (don't show error toast, just a gentle info)
+      if (
+        error.code === 'ACTION_REJECTED' || 
+        error.code === 4001 || 
+        error.code === '4001' ||
+        error.message?.includes('user rejected') ||
+        error.message?.includes('User denied') ||
+        error.message?.includes('rejected')
+      ) {
+        console.log('ℹ️ User cancelled transaction');
+        // Don't show error toast for user cancellation
+        return;
+      }
+      
+      // Handle insufficient funds
+      if (error.code === 'INSUFFICIENT_FUNDS') {
         toast.error('Insufficient balance in wallet');
-      } else {
-        toast.error(error.message || 'Transaction failed');
+        return;
+      }
+      
+      // Handle other errors
+      const errorMessage = error.reason || error.message || 'Transaction failed';
+      // Only show error if it's not a user rejection
+      if (!errorMessage.toLowerCase().includes('user rejected')) {
+        toast.error(errorMessage);
       }
     } finally {
       setLoading(false);

@@ -319,6 +319,8 @@ app.post("/make-server-7fcff8d3/profile/update", async (c) => {
     console.log('✅ Updated selectedBorder:', updatedData.selectedBorder);
 
     await kv.set(`user:${user.id}`, updatedData);
+
+    return c.json({ success: true, user: updatedData });
   } catch (error) {
     console.error("Update profile error:", error);
     return c.json({ error: "Internal server error while updating profile" }, 500);

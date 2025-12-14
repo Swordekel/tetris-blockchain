@@ -568,7 +568,7 @@ export function Profile({ accessToken, onUpdate }: ProfileProps) {
         <Card className="rounded-t-none">
           <CardContent className="pt-0">
             {/* Avatar overlapping cover */}
-            <div className="flex items-center gap-6 -mt-16 mb-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 -mt-16 mb-6">
               <ProfileBorder borderId={userData.selectedBorder} size={128}>
                 <div
                   className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-black"
@@ -595,7 +595,7 @@ export function Profile({ accessToken, onUpdate }: ProfileProps) {
                   )}
                 </div>
               </ProfileBorder>
-              <div className="flex-1 mt-16">
+              <div className="flex-1 mt-0 sm:mt-16 text-center sm:text-left">
                 <h3 className="text-2xl mb-2">{userData.username}</h3>
                 <Badge variant="secondary">{userData.email}</Badge>
               </div>
