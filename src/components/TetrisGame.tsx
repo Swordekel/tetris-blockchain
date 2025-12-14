@@ -426,6 +426,55 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
     setIsPaused(prev => !prev);
   };
 
+  // Mobile controls with hold/repeat functionality
+  const holdIntervalRef = useRef<number | null>(null);
+  const holdTimeoutRef = useRef<number | null>(null);
+
+  const startHoldAction = (action: () => void, isDirectional: boolean = true) => {
+    if (!isPlaying || isPaused || gameOver) return;
+    
+    // Execute immediately
+    action();
+    
+    // For directional buttons, enable hold-to-repeat
+    if (isDirectional) {
+      // Clear any existing intervals
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+      
+      // Start repeating after a short delay
+      holdTimeoutRef.current = window.setTimeout(() => {
+        holdIntervalRef.current = window.setInterval(() => {
+          action();
+        }, 100); // Repeat every 100ms while holding
+      }, 200); // Wait 200ms before starting repeat
+    }
+  };
+
+  const stopHoldAction = () => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+  };
+
+  // Clean up intervals on unmount or game state change
+  useEffect(() => {
+    return () => {
+      stopHoldAction();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying || isPaused || gameOver) {
+      stopHoldAction();
+    }
+  }, [isPlaying, isPaused, gameOver]);
+
   // Mobile controls handlers
   const handleMobileMove = (direction: 'left' | 'right' | 'down') => {
     if (!isPlaying || isPaused || gameOver) return;
@@ -452,13 +501,6 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
   const handleMobileHardDrop = () => {
     if (!isPlaying || isPaused || gameOver) return;
     hardDrop();
-  };
-
-  // Universal handler that works for both touch and click, but prevents double firing
-  const handleButtonPress = (e: React.TouchEvent | React.MouseEvent, action: () => void) => {
-    e.preventDefault();
-    e.stopPropagation();
-    action();
   };
   
   return (
@@ -528,7 +570,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
 
           {/* Mobile Controls - Only visible on small screens */}
           <div className="md:hidden flex flex-col gap-3">
-            <div className="text-xs text-center text-white/60">Mobile Controls</div>
+            <div className="text-xs text-center text-white/60">Mobile Controls (Hold to move faster)</div>
             
             {/* Direction Controls */}
             <div className="grid grid-cols-3 gap-2">
@@ -537,7 +579,18 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => handleButtonPress(e, handleMobileRotate)}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  startHoldAction(handleMobileRotate, false);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
                 onClick={handleMobileRotate}
               >
                 ↑
@@ -547,8 +600,19 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => handleButtonPress(e, () => handleMobileMove('left'))}
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20 select-none"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  startHoldAction(() => handleMobileMove('left'));
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
                 onClick={() => handleMobileMove('left')}
               >
                 ←
@@ -556,8 +620,19 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => handleButtonPress(e, () => handleMobileMove('down'))}
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20 select-none"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  startHoldAction(() => handleMobileMove('down'));
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
                 onClick={() => handleMobileMove('down')}
               >
                 ↓
@@ -565,8 +640,19 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => handleButtonPress(e, () => handleMobileMove('right'))}
+                className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20 select-none"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  startHoldAction(() => handleMobileMove('right'));
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
                 onClick={() => handleMobileMove('right')}
               >
                 →
@@ -579,7 +665,18 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 active:bg-purple-500/40 border-purple-500/30"
-                onTouchStart={(e) => handleButtonPress(e, handleMobileRotate)}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  startHoldAction(handleMobileRotate, false);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
                 onClick={handleMobileRotate}
               >
                 🔄 Rotate
@@ -588,7 +685,18 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="flex-1 bg-red-500/20 hover:bg-red-500/30 active:bg-red-500/40 border-red-500/30"
-                onTouchStart={(e) => handleButtonPress(e, handleMobileHardDrop)}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  startHoldAction(handleMobileHardDrop, false);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  stopHoldAction();
+                }}
                 onClick={handleMobileHardDrop}
               >
                 ⬇️ Drop
