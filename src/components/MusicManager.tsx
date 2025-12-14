@@ -37,7 +37,6 @@ export function MusicManager({ accessToken }: MusicManagerProps) {
   const [uploading, setUploading] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Upload form state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -120,10 +119,20 @@ export function MusicManager({ accessToken }: MusicManagerProps) {
     setUploading(true);
 
     try {
+      console.log('📤 Starting upload...', {
+        fileName: uploadFile.name,
+        fileSize: uploadFile.size,
+        fileType: uploadFile.type,
+        displayName: uploadDisplayName,
+        category: uploadCategory
+      });
+
       const formData = new FormData();
       formData.append('file', uploadFile);
       formData.append('displayName', uploadDisplayName || uploadFile.name);
       formData.append('category', uploadCategory);
+
+      console.log('🌐 Sending request to server...');
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-7fcff8d3/music/admin/music/upload`,
@@ -136,8 +145,12 @@ export function MusicManager({ accessToken }: MusicManagerProps) {
         }
       );
 
+      console.log('📥 Response received:', response.status, response.statusText);
+
+      const data = await response.json();
+      console.log('📊 Response data:', data);
+
       if (response.ok) {
-        const data = await response.json();
         toast.success(
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-500" />
@@ -152,19 +165,26 @@ export function MusicManager({ accessToken }: MusicManagerProps) {
         setUploadFile(null);
         setUploadDisplayName('');
         setUploadCategory('background');
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
 
         // Reload list
         loadMusicList();
       } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to upload music');
+        console.error('❌ Upload failed:', data);
+        toast.error(
+          <div>
+            <div className="font-semibold">Upload Failed</div>
+            <div className="text-sm">{data.error || 'Unknown error'}</div>
+          </div>
+        );
       }
     } catch (error) {
       console.error('Upload music error:', error);
-      toast.error('Failed to upload music');
+      toast.error(
+        <div>
+          <div className="font-semibold">Upload Error</div>
+          <div className="text-sm">{error instanceof Error ? error.message : 'Network error occurred'}</div>
+        </div>
+      );
     } finally {
       setUploading(false);
     }
@@ -293,7 +313,6 @@ export function MusicManager({ accessToken }: MusicManagerProps) {
             <Label htmlFor="music-file">Audio File</Label>
             <div className="flex gap-2">
               <Input
-                ref={fileInputRef}
                 id="music-file"
                 type="file"
                 accept=".mp3,.wav,.ogg,.webm,audio/*"
@@ -302,7 +321,7 @@ export function MusicManager({ accessToken }: MusicManagerProps) {
                 className="flex-1"
               />
               <Button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => document.getElementById('music-file')?.click()}
                 variant="outline"
                 disabled={uploading}
               >

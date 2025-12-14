@@ -1,5 +1,5 @@
 // Audio Manager for Tetris Game
-import { MUSIC_CONFIG, getSongById, MUSIC_SETTINGS, DEFAULT_SONG_ID } from '../config/music.config';
+import { MUSIC_CONFIG, getSongById, MUSIC_SETTINGS, DEFAULT_SONG_ID, type Song } from '../config/music.config';
 
 class AudioManager {
   private audioContext: AudioContext | null = null;
@@ -10,6 +10,7 @@ class AudioManager {
   private melodyTimeout: number | null = null;
   private audioElements: Map<string, HTMLAudioElement> = new Map();
   private currentAudioElement: HTMLAudioElement | null = null;
+  private customSongs: Song[] = []; // Store dynamically loaded songs
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -62,11 +63,19 @@ class AudioManager {
       this.audioContext.resume();
     }
 
-    const song = getSongById(this.currentSongId);
+    // Try to find song from custom songs first, then fall back to built-in
+    let song = this.getCustomSongById(this.currentSongId);
+    if (!song) {
+      song = getSongById(this.currentSongId);
+    }
+    
     if (!song) return;
+
+    console.log('🎵 Playing song:', song.name, 'File:', song.file);
 
     // Check if song uses external file or synthesized
     if (song.file && !song.fallbackSynthesized) {
+      // Regular audio file (uploaded or built-in without fallback)
       this.playExternalFile(song.id, song.file);
     } else if (song.fallbackSynthesized) {
       // Try external file first, fallback to synthesized
@@ -78,14 +87,11 @@ class AudioManager {
   }
 
   private playExternalFile(songId: string, filePath: string) {
+    // IMPORTANT: Stop ALL audio sources first (including synthesized music timeouts)
+    this.stopBackgroundMusic();
+    
     const audio = this.createAudioElement(songId, filePath);
     
-    // Stop current audio if any
-    if (this.currentAudioElement && this.currentAudioElement !== audio) {
-      this.currentAudioElement.pause();
-      this.currentAudioElement.currentTime = 0;
-    }
-
     this.currentAudioElement = audio;
     
     audio.play().catch(error => {
@@ -94,15 +100,12 @@ class AudioManager {
   }
 
   private playWithFallback(songId: string, filePath: string) {
+    // IMPORTANT: Stop ALL audio sources first (including synthesized music timeouts)
+    this.stopBackgroundMusic();
+    
     if (filePath) {
       const audio = this.createAudioElement(songId, filePath);
       
-      // Stop current audio if any
-      if (this.currentAudioElement && this.currentAudioElement !== audio) {
-        this.currentAudioElement.pause();
-        this.currentAudioElement.currentTime = 0;
-      }
-
       this.currentAudioElement = audio;
       
       audio.play().catch(error => {
@@ -269,7 +272,12 @@ class AudioManager {
 
   switchSong(songId: string) {
     console.log('🎵 Switching to song:', songId);
-    const song = getSongById(songId);
+    
+    // Try to find song from custom songs first, then fall back to built-in
+    let song = this.getCustomSongById(songId);
+    if (!song) {
+      song = getSongById(songId);
+    }
     
     if (!song) {
       console.error(`❌ Song not found: ${songId}`);
@@ -290,6 +298,17 @@ class AudioManager {
 
   getAllSongs() {
     return MUSIC_CONFIG;
+  }
+
+  // Update song list with dynamically loaded songs
+  updateSongList(songs: Song[]) {
+    this.customSongs = songs;
+    console.log('🎵 Song list updated:', songs.length, 'total songs');
+  }
+
+  // Get song by ID from both built-in and custom songs
+  private getCustomSongById(songId: string): Song | undefined {
+    return this.customSongs.find(song => song.id === songId);
   }
 
   // Sound Effects

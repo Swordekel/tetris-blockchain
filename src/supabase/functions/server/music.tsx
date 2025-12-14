@@ -140,15 +140,19 @@ music.get("/admin/music", async (c) => {
 // POST /admin/music/upload - Upload music file
 music.post("/admin/music/upload", async (c) => {
   try {
+    console.log('🎵 Upload music request received');
+    
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     
     if (!accessToken) {
+      console.error('❌ No access token provided');
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
     const { isAdmin: userIsAdmin } = await isAdmin(accessToken);
     
     if (!userIsAdmin) {
+      console.error('❌ User is not admin');
       return c.json({ error: 'Admin access required' }, 403);
     }
 
@@ -158,28 +162,42 @@ music.post("/admin/music/upload", async (c) => {
     );
 
     // Ensure bucket exists
+    console.log('📦 Ensuring music bucket exists...');
     await ensureMusicBucket(supabase);
 
     // Parse form data
+    console.log('📄 Parsing form data...');
     const formData = await c.req.formData();
     const file = formData.get('file') as File;
     const displayName = formData.get('displayName') as string;
     const category = formData.get('category') as string || 'general';
 
+    console.log('📝 Form data received:', {
+      hasFile: !!file,
+      displayName,
+      category,
+      fileType: file?.type,
+      fileSize: file?.size,
+      fileName: file?.name
+    });
+
     if (!file) {
+      console.error('❌ No file in form data');
       return c.json({ error: 'No file provided' }, 400);
     }
 
     // Validate file type
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm'];
     if (!allowedTypes.includes(file.type)) {
-      return c.json({ error: 'Invalid file type. Only MP3, WAV, OGG, and WEBM are allowed.' }, 400);
+      console.error('❌ Invalid file type:', file.type);
+      return c.json({ error: `Invalid file type: ${file.type}. Only MP3, WAV, OGG, and WEBM are allowed.` }, 400);
     }
 
     // Validate file size (50MB max)
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-      return c.json({ error: 'File too large. Maximum size is 50MB.' }, 400);
+      console.error('❌ File too large:', file.size);
+      return c.json({ error: `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum size is 50MB.` }, 400);
     }
 
     // Generate safe filename
@@ -191,10 +209,14 @@ music.post("/admin/music/upload", async (c) => {
       .toLowerCase();
     const fileName = `${safeName}_${timestamp}.${ext}`;
 
+    console.log('📁 Generated filename:', fileName);
+
     // Convert File to ArrayBuffer
+    console.log('🔄 Converting file to array buffer...');
     const arrayBuffer = await file.arrayBuffer();
     const fileData = new Uint8Array(arrayBuffer);
 
+    console.log('📤 Uploading to Supabase Storage...');
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from(MUSIC_BUCKET)
@@ -204,16 +226,21 @@ music.post("/admin/music/upload", async (c) => {
       });
 
     if (error) {
-      console.error('Upload error:', error);
-      return c.json({ error: error.message }, 500);
+      console.error('❌ Upload error:', error);
+      return c.json({ error: `Upload failed: ${error.message}` }, 500);
     }
+
+    console.log('✅ File uploaded successfully:', data);
 
     // Get public URL
     const { data: urlData } = supabase.storage
       .from(MUSIC_BUCKET)
       .getPublicUrl(fileName);
 
+    console.log('🔗 Public URL generated:', urlData.publicUrl);
+
     // Save metadata to KV store
+    console.log('💾 Saving metadata to KV store...');
     const musicMetadata = await kv.get('music:metadata') || {};
     musicMetadata[fileName] = {
       displayName: displayName || safeName.replace(/_/g, ' '),
@@ -225,7 +252,7 @@ music.post("/admin/music/upload", async (c) => {
     };
     await kv.set('music:metadata', musicMetadata);
 
-    console.log('✅ Music uploaded:', fileName);
+    console.log('✅ Music uploaded successfully:', fileName);
 
     return c.json({
       success: true,
@@ -241,7 +268,8 @@ music.post("/admin/music/upload", async (c) => {
     });
 
   } catch (error: any) {
-    console.error('Upload music error:', error);
+    console.error('❌ Upload music error:', error);
+    console.error('Error stack:', error.stack);
     return c.json({ error: error.message || 'Failed to upload music' }, 500);
   }
 });
@@ -352,6 +380,70 @@ music.put("/admin/music/:fileName/metadata", async (c) => {
   } catch (error: any) {
     console.error('Update music metadata error:', error);
     return c.json({ error: error.message || 'Failed to update metadata' }, 500);
+  }
+});
+
+// GET /public/background - Get background music list (public access)
+music.get("/public/background", async (c) => {
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Ensure bucket exists
+    await ensureMusicBucket(supabase);
+
+    // List all files in music bucket
+    const { data: files, error } = await supabase.storage
+      .from(MUSIC_BUCKET)
+      .list('', {
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+    if (error) {
+      console.error('List music error:', error);
+      return c.json({ error: error.message }, 500);
+    }
+
+    // Get music metadata from KV store
+    const musicMetadata = await kv.get('music:metadata') || {};
+
+    // Get public URLs and filter by background category
+    const backgroundMusic = (files || [])
+      .map((file: any) => {
+        const metadata = musicMetadata[file.name] || {};
+        
+        // Only include background music
+        if (metadata.category !== 'background') {
+          return null;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from(MUSIC_BUCKET)
+          .getPublicUrl(file.name);
+
+        return {
+          id: file.name.replace(/\.[^/.]+$/, ''), // Remove extension for ID
+          name: metadata.displayName || file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
+          artist: metadata.artist || 'Uploaded Music',
+          file: urlData.publicUrl,
+          icon: metadata.icon || '🎵',
+          size: file.metadata?.size || 0,
+          uploadedAt: metadata.uploadedAt || null
+        };
+      })
+      .filter(Boolean); // Remove nulls
+
+    return c.json({ 
+      success: true,
+      music: backgroundMusic,
+      total: backgroundMusic.length
+    });
+
+  } catch (error: any) {
+    console.error('Get background music error:', error);
+    return c.json({ error: error.message || 'Failed to get background music' }, 500);
   }
 });
 
