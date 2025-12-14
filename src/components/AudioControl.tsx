@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Volume2, VolumeX, Music, ChevronDown } from 'lucide-react';
 import { getAudioManager } from '../utils/audio';
+import { projectId, publicAnonKey } from '../utils/supabase/info';
 
 export function AudioControl() {
   const [isMuted, setIsMuted] = useState(false);
@@ -10,23 +11,71 @@ export function AudioControl() {
   const [availableSongs, setAvailableSongs] = useState<any[]>([]);
 
   useEffect(() => {
+    loadSongs();
+    
     // Get initial muted state from audio manager
     const audio = getAudioManager();
     const currentMutedState = audio.isMusicMuted();
     const currentSongState = audio.getCurrentSongId();
-    const songs = audio.getAllSongs();
     
     setIsMuted(currentMutedState);
     setCurrentSongId(currentSongState);
-    setAvailableSongs(songs);
     
-    console.log('🎵 AudioControl mounted. Songs available:', songs.length);
+    console.log('🎵 AudioControl mounted');
     
     // Start background music if not muted
     if (!currentMutedState) {
       audio.playBackgroundMusic();
     }
   }, []);
+
+  const loadSongs = async () => {
+    const audio = getAudioManager();
+    const builtInSongs = audio.getAllSongs();
+    
+    // Fetch uploaded background music from server
+    try {
+      const url = `https://${projectId}.supabase.co/functions/v1/make-server-7fcff8d3/music/public/background`;
+      console.log('🎵 Fetching uploaded music from:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+        },
+      });
+      
+      console.log('🎵 Response status:', response.status, response.statusText);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🎵 Response data:', data);
+        
+        const uploadedSongs = data.music || [];
+        
+        // Merge built-in songs with uploaded songs
+        const allSongs = [...builtInSongs, ...uploadedSongs];
+        setAvailableSongs(allSongs);
+        
+        // Update audio manager with new songs
+        audio.updateSongList(allSongs);
+        
+        console.log('🎵 Songs loaded:', {
+          builtIn: builtInSongs.length,
+          uploaded: uploadedSongs.length,
+          total: allSongs.length
+        });
+      } else {
+        // Fallback to built-in songs only
+        const errorText = await response.text();
+        console.warn('Failed to load uploaded music:', response.status, errorText);
+        setAvailableSongs(builtInSongs);
+      }
+    } catch (error) {
+      console.error('Error loading uploaded music:', error);
+      // Fallback to built-in songs only
+      setAvailableSongs(builtInSongs);
+    }
+  };
 
   const toggleMute = () => {
     const audio = getAudioManager();

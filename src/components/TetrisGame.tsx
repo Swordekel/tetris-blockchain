@@ -454,6 +454,13 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
     hardDrop();
   };
 
+  // Universal handler that works for both touch and click, but prevents double firing
+  const handleButtonPress = (e: React.TouchEvent | React.MouseEvent, action: () => void) => {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+  };
+  
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
@@ -530,10 +537,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMobileRotate();
-                }}
+                onTouchStart={(e) => handleButtonPress(e, handleMobileRotate)}
                 onClick={handleMobileRotate}
               >
                 ↑
@@ -544,10 +548,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMobileMove('left');
-                }}
+                onTouchStart={(e) => handleButtonPress(e, () => handleMobileMove('left'))}
                 onClick={() => handleMobileMove('left')}
               >
                 ←
@@ -556,10 +557,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMobileMove('down');
-                }}
+                onTouchStart={(e) => handleButtonPress(e, () => handleMobileMove('down'))}
                 onClick={() => handleMobileMove('down')}
               >
                 ↓
@@ -568,10 +566,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="h-16 text-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border-white/20"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMobileMove('right');
-                }}
+                onTouchStart={(e) => handleButtonPress(e, () => handleMobileMove('right'))}
                 onClick={() => handleMobileMove('right')}
               >
                 →
@@ -584,10 +579,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 active:bg-purple-500/40 border-purple-500/30"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMobileRotate();
-                }}
+                onTouchStart={(e) => handleButtonPress(e, handleMobileRotate)}
                 onClick={handleMobileRotate}
               >
                 🔄 Rotate
@@ -596,10 +588,7 @@ export function TetrisGame({ selectedSkin, onGameOver }: TetrisGameProps) {
                 variant="outline"
                 size="lg"
                 className="flex-1 bg-red-500/20 hover:bg-red-500/30 active:bg-red-500/40 border-red-500/30"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMobileHardDrop();
-                }}
+                onTouchStart={(e) => handleButtonPress(e, handleMobileHardDrop)}
                 onClick={handleMobileHardDrop}
               >
                 ⬇️ Drop
