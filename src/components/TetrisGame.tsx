@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Volume2, VolumeX } from 'lucide-react';
 import { LineClearEffect } from './LineClearEffect';
+import { getAudioManager } from '../utils/audio';
 
 interface TetrisGameProps {
   selectedSkin: string;
